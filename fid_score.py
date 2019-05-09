@@ -82,6 +82,8 @@ parser.add_argument('--dims', type=int, default=2048,
                           'By default, uses pool3 features'))
 parser.add_argument('-c', '--gpu', default='', type=str,
                     help='GPU to use (leave blank for CPU only)')
+parser.add_argument('-n', '--name', default='fid_score.txt', type=str,
+                    help='File to save result to.')
 
 
 def get_activations(files, model, batch_size=50, dims=2048,
@@ -276,3 +278,6 @@ if __name__ == '__main__':
                                           args.gpu != '',
                                           args.dims)
     print('FID: ', fid_value)
+    with open(args.name, 'w') as f:
+        f.write('FID: ' + str(fid_value))
+
