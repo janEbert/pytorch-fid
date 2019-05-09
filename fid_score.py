@@ -117,7 +117,7 @@ def get_activations(files, model, batch_size=50, dims=2048,
 
     ds = ImagesPathDataset(files, transforms=TF.ToTensor())
     dl = DataLoader(ds, batch_size=batch_size, drop_last=True,
-            num_workers=2 * cpu_count(), pin_memory=cuda)
+            num_workers=cpu_count(), pin_memory=cuda)
 
     n_batches = len(dl)
     n_used_imgs = n_batches * batch_size
