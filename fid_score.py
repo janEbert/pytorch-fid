@@ -74,16 +74,18 @@ parser = ArgumentParser(formatter_class=ArgumentDefaultsHelpFormatter)
 parser.add_argument('path', type=str, nargs=2,
                     help=('Path to the generated images or '
                           'to .npz statistic files'))
-parser.add_argument('--batch-size', type=int, default=50,
+parser.add_argument('-b', '--batch-size', type=int, default=50,
                     help='Batch size to use')
-parser.add_argument('--dims', type=int, default=2048,
+parser.add_argument('-d', '--dims', type=int, default=2048,
                     choices=list(InceptionV3.BLOCK_INDEX_BY_DIM),
                     help=('Dimensionality of Inception features to use. '
                           'By default, uses pool3 features'))
 parser.add_argument('-c', '--gpu', default='', type=str,
-                    help='GPU to use (leave blank for CPU only)')
+                    help='GPU to use (usually 0) (leave blank for CPU only)')
 parser.add_argument('-n', '--name', default='fid_score.txt', type=str,
                     help='File to save result to.')
+parser.add_argument('-s', '--save-stats', action='store_true',
+                    help='Whether to save dataset statistics to .nzp files.')
 
 
 def get_activations(files, model, batch_size=50, dims=2048,
@@ -248,7 +250,13 @@ def _compute_statistics_of_path(path, model, batch_size, dims, cuda):
     return m, s
 
 
-def calculate_fid_given_paths(paths, batch_size, cuda, dims):
+def save_npz(path, mu, sigma):
+    path = pathlib.Path(path)
+    save_path = Path(path / (path.name + '.npz'))
+    np.savez(save_path, mu=mu, sigma=sigma)
+
+
+def calculate_fid_given_paths(paths, batch_size, cuda, dims, save_stats):
     """Calculates the FID of two paths"""
     for p in paths:
         if not os.path.exists(p):
@@ -262,8 +270,14 @@ def calculate_fid_given_paths(paths, batch_size, cuda, dims):
 
     m1, s1 = _compute_statistics_of_path(paths[0], model, batch_size,
                                          dims, cuda)
+    if save_stats and not paths[0].endswith('.npz'):
+        save_npz(paths[0], m1, s1)
+
     m2, s2 = _compute_statistics_of_path(paths[1], model, batch_size,
                                          dims, cuda)
+    if save_stats and not paths[1].endswith('.npz'):
+        save_npz(paths[1], m2, s2)
+
     fid_value = calculate_frechet_distance(m1, s1, m2, s2)
 
     return fid_value
@@ -276,8 +290,9 @@ if __name__ == '__main__':
     fid_value = calculate_fid_given_paths(args.path,
                                           args.batch_size,
                                           args.gpu != '',
-                                          args.dims)
+                                          args.dims,
+                                          args.save_stats)
     print('FID: ', fid_value)
     with open(args.name, 'w') as f:
-        f.write('FID: ' + str(fid_value))
+        f.write('FID: ' + str(fid_value) + '\n')
 
